@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кейс: екран для групи</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{-webkit-user-select:text;user-select:text}
+.shell{max-width:1400px;margin:0 auto;padding:12px 16px 40px}
+.bar0{background:var(--grad);color:#fff;border-radius:14px;padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:10px}
+.bar0 h1{margin:0;font-size:19px;color:#fff;flex:1;min-width:240px}
+.bar0 .big{font-size:36px;background:rgba(255,255,255,.18);border-radius:12px;padding:2px 14px;font-variant-numeric:tabular-nums}
+.bar0 .big.warn{background:var(--amber)}.bar0 .big.end{background:var(--red)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+.ctrl button,.sm{border:0;border-radius:999px;padding:10px 16px;font:600 14px 'Montserrat',sans-serif;color:#fff;background:var(--grad);cursor:pointer}
+.ctrl button.sec,.sm.sec{background:#fff;color:var(--blue);border:2px solid var(--blue)}.ctrl button.danger{background:var(--red)}.ctrl button:disabled{opacity:.45}
+.cols{display:grid;grid-template-columns:minmax(300px,0.9fr) minmax(0,2fr);gap:14px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+thead{background:var(--grad)}th{background:transparent;color:#fff;text-align:left;padding:8px 10px;font-weight:600}
+td{padding:6px 10px;border-top:1px solid var(--line)}tr:nth-child(even) td{background:#F6F9FE}
+td.n{font-weight:600;cursor:pointer}
+tr.out td{background:#FDECEF!important;animation:pulse 1s infinite;border-top:1px solid #F5B5BF}tr.out td.n{font-size:15px;font-weight:700;color:var(--red)}tr.out td:first-child{box-shadow:inset 6px 0 0 var(--red)}
+tr.left td.n{color:var(--red)}tr.nosig td{color:#9AA5BC}
+@keyframes pulse{50%{filter:brightness(.9)}}
+.badge{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;margin-left:6px;background:#FDECEF;color:var(--red)}tr.out .badge{background:var(--red);color:#fff}
+.bar2{height:8px;border-radius:4px;background:var(--line);width:70px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}.bar2>i{display:block;height:100%;background:var(--grad)}
+.panel{background:var(--soft);border-radius:14px;padding:16px 18px}
+.panel h2{margin:0 0 6px;font-size:20px}
+.it{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:8px 0}
+.it .q{font-size:15px;font-weight:600;margin:0 0 6px}.sub2{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}.sub2:first-of-type{border-top:0;margin-top:0;padding-top:0}.sub2 .q{font-size:13px;color:var(--ink)}
+.opt2{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:14px}
+.opt2 .l{width:44%;min-width:150px}.opt2 .b{flex:1;height:20px;background:var(--line);border-radius:6px;overflow:hidden}.opt2 .b>i{display:block;height:100%;background:#9DB7E6}
+.opt2.ok .b>i{background:var(--green)}.opt2.ok .l{font-weight:700;color:var(--green)}.opt2 .c{width:46px;text-align:right;font-weight:700}
+.big2{font-size:54px;font-weight:700;line-height:1.1}
+.feed{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}.feed .fc{background:#fff;border-radius:10px;border:1px solid var(--line);padding:8px 10px;font-size:13.5px}.feed .fc b{display:block;color:var(--blue);font-size:12px}
+.feat{background:#fff;border:3px solid var(--blue);border-radius:16px;padding:16px 20px}
+.feat .fn{font-size:30px;font-weight:700}
+.fa{background:var(--soft);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:16px}.fa .fq{font-size:12px;color:var(--mute);margin-bottom:2px}
+.fa.okk{background:var(--softg)}.fa.nn{background:#FDECEF}
+.votes{display:flex;gap:18px;margin:10px 0}.votes div{flex:1;border-radius:12px;padding:10px;text-align:center;font-weight:700}.votes .ag{background:var(--softg);color:var(--green)}.votes .dg{background:#FDECEF;color:var(--red)}.votes span{font-size:40px;display:block}
+.grades{display:grid;grid-template-columns:repeat(11,1fr);gap:4px;margin:8px 0}.grades button{border:2px solid var(--line);background:#fff;border-radius:8px;padding:8px 0;font:600 14px 'Montserrat',sans-serif;color:var(--ink);cursor:pointer}.grades button.on{background:var(--grad);color:#fff;border-color:transparent}
+.cnt{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:0 0 8px}.cnt b{font-size:18px}
+.gate{max-width:360px;margin:80px auto;text-align:center}
+.cm{font-size:13px;margin:3px 0}.cm b.a{color:var(--green)}.cm b.d{color:var(--red)}
+</style>
+</head>
+<body>
+<div id="gate" class="gate"><h1>Екран для групи</h1><input id="pin" class="field" type="password" placeholder="PIN"><div class="err" id="gerr"></div><button class="btn" id="gbtn">Увійти</button></div>
+<div id="app" class="shell hidden">
+  <div class="bar0"><h1 id="hTitle"></h1><div id="hStatus" style="font-size:14px"></div><div class="big" id="hTimer">—</div></div>
+  <div class="ctrl" id="ctrl"></div>
+  <div class="ctrl"><button class="sec" id="qrT">Телефон викладача (QR)</button><button class="sec" id="qrS">QR для студентів</button></div>
+  <div class="cols">
+    <div><div class="cnt" id="cnt"></div>
+      <table><thead><tr><th>Студент</th><th>Крок</th><th>Тест</th><th>Усне</th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="ctrl" style="margin-top:12px"><button class="sec" id="csv">Зберегти Excel-файл групи (.xlsx)</button><button class="sec" id="snap">Зберегти в Google Таблицю</button><button id="reset" style="background:#fff;color:var(--red);border:2px solid var(--red)">Нова пара: очистити</button></div></div>
+    <div id="main"></div>
+  </div>
+</div>
+<div id="qrm" class="overlay hidden" style="background:rgba(15,20,36,.92)"><div style="background:#fff;color:var(--ink);border-radius:18px;padding:20px 22px;max-width:420px;width:92%;text-align:center"><h2 id="qrTitle" style="margin:0 0 4px"></h2><p class="mute" id="qrNote" style="margin:0 0 10px"></p><div id="qrBox" style="width:min(70vw,340px);margin:0 auto"></div><p class="mute" id="qrUrl" style="word-break:break-all;font-size:11px;margin:10px 0 0"></p><button class="btn" id="qrClose">Закрити</button></div></div>
+<script src="qrcode.js"></script>
+<script src="xlsx.mini.min.js"></script>
+<script src="config.js"></script>
+<script src="cases2.js"></script>
+<script>
+(function(){
+"use strict";
+const C = window.CONFIG, CASE = window.CASE, $ = s => document.querySelector(s);
+let pin = sessionStorage.getItem('case2_pin') || '', D = null, offset = 0, TEACH = null, gsel = null, busy = false, showFeed = {};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const stepInfo = n => CASE.steps.find(s => s.n === n);
+const fmt = s => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const dur = sec => { const m = Math.floor(sec / 60), r = sec % 60; return (m ? m + ' хв' : '') + (m && r ? ' ' : '') + (r ? r + ' с' : ''); };
+async function getDash() { return (await fetch(C.API_URL + '?action=dash&pin=' + encodeURIComponent(pin))).json(); }
+async function cmd(b) { return (await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action: 'hostcmd', pin }, b)) })).json(); }
+async function act(b, conf) { if (busy) return; if (conf && !confirm(conf)) return; busy = true; try { await cmd(b); apply(await getDash()); } catch (e) {} busy = false; }
+
+async function enter() {
+  try {
+    const r = await getDash(); if (!r.ok) { $('#gerr').textContent = 'Невірний PIN або немає зв’язку'; return; }
+    sessionStorage.setItem('case2_pin', pin);
+    TEACH = await (await fetch(C.API_URL + '?action=teach&pin=' + encodeURIComponent(pin))).json();
+    $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#hTitle').textContent = CASE.case.title + ' · ' + CASE.case.event; apply(r);
+  } catch (e) { $('#gerr').textContent = 'Немає зв’язку із сервером'; }
+}
+$('#gbtn').onclick = () => { pin = $('#pin').value.trim(); enter(); }; $('#pin').onkeydown = e => { if (e.key === 'Enter') $('#gbtn').click(); };
+
+function apply(r) { if (!r.ok) return; offset = r.now - Date.now(); D = r; $('#hTitle').textContent = CASE.case.title + ' · ' + CASE.case.event + (r.group ? ' · ' + r.group : ''); drawCtrl(); drawRows(); drawMain(); drawStatus(); }
+function drawStatus() { const st = D.state; $('#hStatus').textContent = { lobby: 'Очікування початку', running: 'Крок ' + st.step + ' іде', closed: 'Крок ' + st.step + ' завершено', finished: 'Кейс завершено' }[st.status]; }
+function drawTimer() {
+  if (!D) return; const st = D.state, el = $('#hTimer'); el.classList.remove('warn', 'end');
+  if (st.status !== 'running') { el.textContent = st.status === 'closed' ? 'стоп' : '—'; return; }
+  const left = st.durationSec - (Date.now() + offset - st.startedAt) / 1000; el.textContent = left > 0 ? fmt(left) : '00:00';
+  if (left <= 0) el.classList.add('end'); else if (left <= 30) el.classList.add('warn');
+}
+function drawCtrl() {
+  const st = D.state; let h = '';
+  if (st.status === 'lobby' || st.status === 'closed') { const n = st.status === 'lobby' ? 1 : st.step + 1; if (n <= CASE.steps.length) h += `<button data-a="start" data-n="${n}">Запустити крок ${n}. ${esc(stepInfo(n).title)} (${dur(stepInfo(n).seconds)})</button>`; if (st.status === 'closed') h += `<button class="sec" data-a="finish">Завершити кейс</button>`; }
+  if (st.status === 'running') h += `<button class="sec" data-a="extend">+30 с</button><button class="danger" data-a="close">Закрити крок ${st.step}</button>`;
+  if (st.status === 'closed' || st.status === 'running') h += `<button class="sec" data-a="pick">Обрати студента для усної відповіді</button>`;
+  $('#ctrl').innerHTML = h;
+  document.querySelectorAll('#ctrl [data-a]').forEach(b => b.onclick = () => {
+    const a = b.dataset.a;
+    if (a === 'start') { const n = parseInt(b.dataset.n, 10); gsel = null; showFeed = {}; act({ cmd: 'start', step: n, durationSec: stepInfo(n).seconds }); }
+    else if (a === 'extend') act({ cmd: 'extend', sec: 30 }); else if (a === 'close') act({ cmd: 'close' });
+    else if (a === 'finish') act({ cmd: 'finish' }, 'Завершити кейс? Студенти побачать свої результати.');
+    else if (a === 'pick') { gsel = null; act({ cmd: 'feature', step: D.state.step }).then(() => {}); }
+  });
+}
+function drawRows() {
+  const st = D.state, n = st.step, tot = n ? stepInfo(n).items.length : 0;
+  const list = D.students.slice().sort((a, b) => (b.outside - a.outside) || a.name.localeCompare(b.name, 'uk'));
+  const here = D.students.filter(s => s.seenAgo !== null && s.seenAgo < 30).length, out = D.students.filter(s => s.outside).length;
+  $('#cnt').innerHTML = `<div>У платформі <b>${here}</b> із ${D.students.length}</div><div>Поза платформою <b style="color:${out ? 'var(--red)' : 'inherit'}">${out}</b></div>`;
+  $('#rows').innerHTML = list.map(s => {
+    const nosig = s.seenAgo === null || s.seenAgo > 45, cls = s.outside ? 'out' : (s.leaves ? 'left' : '') + (nosig ? ' nosig' : '');
+    const pct = tot ? Math.round(s.answeredCur / tot * 100) : 0;
+    const away = s.outside ? ` <span class="badge">поза платформою ${Math.round((D.now - s.outsideSince) / 1000)} с</span>` : (s.leaves ? ` <span class="badge">виходів ${s.leaves}</span>` : '');
+    return `<tr class="${cls}"><td class="n" data-id="${s.id}" title="Викликати усно">${esc(s.name)}${away}</td><td><span class="bar2"><i style="width:${pct}%"></i></span>${n ? s.answeredCur + '/' + tot : '—'}</td><td>${s.score}/${D.autoTotal}</td><td>${s.bonus ? '+' + s.bonus : '—'}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="mute">Студенти ще не приєдналися</td></tr>';
+  document.querySelectorAll('#rows td.n').forEach(td => td.onclick = () => { if (D.state.status === 'lobby') return; gsel = null; act({ cmd: 'feature', step: D.state.step || 1, id: td.dataset.id }); });
+}
+const filledH = v => v !== undefined && v !== null && String(v) !== '';
+function itemBlock(it, keyShown, label) {
+  const t = (D.stats[it.id]) || { n: 0, ok: 0, opts: {} }, k = TEACH.items[it.id] || {}, hasKey = k.key !== null && k.key !== undefined;
+  let h = `<div class="sub2"><div class="q">${esc(label)}</div>`;
+  if (it.type === 'choice' || it.type === 'select') {
+    const opts = t.opts || {}, max = Math.max(1, ...Object.values(opts));
+    const shownIdx = it.o.map((o, i) => i).filter(i => it.type === 'choice' || (opts[i] || 0) > 0 || (hasKey && keyShown && k.key === i));
+    h += shownIdx.map(i => { const c = opts[i] || 0, ok = keyShown && hasKey && k.key === i; return `<div class="opt2 ${ok ? 'ok' : ''}"><div class="l">${esc(it.o[i])}</div><div class="b"><i style="width:${c / max * 100}%"></i></div><div class="c">${c}</div></div>`; }).join('') || `<div class="mute">Відповіли: ${t.n}</div>`;
+    if (keyShown && hasKey) h += `<div class="mute" style="font-size:12px">Правильно: ${t.n ? Math.round(t.ok / t.n * 100) : 0}%</div>`;
+  } else if (it.type === 'number') {
+    h += keyShown ? `<div style="font-size:15px">Правильна відповідь: <b>${k.key}</b>. Відповіли правильно: <b>${t.n ? Math.round(t.ok / t.n * 100) : 0}%</b> (${t.ok} із ${t.n})</div>` : `<div class="mute">Відповіли: ${t.n}</div>`;
+  } else {
+    h += `<div class="mute">Письмових відповідей: ${t.n}</div>`;
+    if (keyShown) {
+      const rows = D.feed.filter(f => f.item === it.id);
+      if (rows.length) h += `<button class="sm sec" data-feed="${it.id}" style="margin-top:6px">${showFeed[it.id] ? 'Сховати відповіді' : 'Показати відповіді (' + rows.length + ')'}</button>`;
+      if (showFeed[it.id]) h += `<div class="feed">${rows.slice(0, 20).map(f => `<div class="fc"><b>${esc(f.name)}</b>${esc(f.value)}</div>`).join('')}</div>`;
+    }
+  }
+  return h + '</div>';
+}
+function groupsOf(items) { const out = []; items.forEach(it => { const g = it.g || null, last = out[out.length - 1]; if (g && last && last.g === g) last.items.push(it); else out.push({ g, items: [it] }); }); return out; }
+function drawMain() {
+  const st = D.state, m = $('#main');
+  if (D.feature) { m.innerHTML = featureHTML(); bindFeature(); return; }
+  if (st.status === 'lobby') {
+    m.innerHTML = `<div class="panel"><h2>${esc(CASE.case.title)}</h2><p style="font-size:17px;line-height:1.6">${esc(CASE.case.story)}</p><p class="mute">Студенти скануйте QR-код (кнопка «QR для студентів») і вводять прізвище та ім’я.</p></div>`; return;
+  }
+  const s = stepInfo(st.step), keyShown = st.status !== 'running';
+  const answered = D.students.filter(x => x.answeredCur > 0).length;
+  let h = `<div class="panel"><h2>Крок ${st.step}. ${esc(s.title)}</h2><p style="font-size:16px;margin:0 0 6px">${esc(s.lead)}</p>`;
+  if (st.status === 'running') h += `<div class="big2">${answered} <span style="font-size:22px;font-weight:600">із ${D.students.length} відповідають</span></div>`;
+  else h += `<p class="mute" style="margin:0 0 4px">Результати кроку. Оберіть студента для усної відповіді: кнопка вгорі або натисніть прізвище в списку.</p>`;
+  groupsOf(s.items).forEach(gr => {
+    if (!gr.g) { gr.items.forEach(it => { h += `<div class="it">${itemBlock(it, keyShown, it.q)}</div>`; }); return; }
+    h += `<div class="it"><div class="q" style="color:var(--blue)">${esc(gr.g)}</div>` + gr.items.map(it => itemBlock(it, keyShown, it.sq || it.q)).join('') + `</div>`;
+  });
+  m.innerHTML = h + '</div>';
+  m.querySelectorAll('[data-feed]').forEach(b => b.onclick = () => { showFeed[b.dataset.feed] = !showFeed[b.dataset.feed]; drawMain(); });
+}
+function featureHTML() {
+  const f = D.feature, s = stepInfo(f.step);
+  const one = it => {
+    const v = f.answers[it.id]; if (!filledH(v)) return '';
+    const k = TEACH.items[it.id] || {}, hasKey = k.key !== null && k.key !== undefined; let cls = '', shown = v;
+    if (it.type === 'choice' || it.type === 'select') { shown = it.o[v] !== undefined ? it.o[v] : v; if (hasKey) cls = parseInt(v, 10) === k.key ? 'okk' : 'nn'; }
+    if (it.type === 'number') cls = Math.abs(parseFloat(String(v).replace(',', '.')) - k.key) <= (k.tol || .1) ? 'okk' : 'nn';
+    return `<div class="fa ${cls}"><div class="fq">${esc(it.g ? (it.sq || '') : it.q)}</div>${esc(shown)}</div>`;
+  };
+  const rows = groupsOf(s.items).map(gr => { const parts = gr.items.map(one).join(''); return parts ? (gr.g ? `<div style="margin-top:8px;font-weight:600;font-size:14px;color:var(--blue)">${esc(gr.g)}</div>` : '') + parts : ''; }).join('') || '<p class="mute">Студент ще нічого не відповів.</p>';
+  return `<div class="feat" style="max-height:78vh;overflow:auto"><div class="mute">Усна відповідь · крок ${f.step}. ${esc(s.title)}</div><div class="fn">${esc(f.name)}</div>${rows}
+   <div class="votes"><div class="ag"><span>${f.agree}</span>згодні</div><div class="dg"><span>${f.disagree}</span>не згодні</div></div>
+   ${f.comments.length ? f.comments.slice(-6).map(c => `<div class="cm"><b class="${c.vote === 'agree' ? 'a' : 'd'}">${c.vote === 'agree' ? 'Згоден' : 'Не згоден'}</b> ${esc(c.name)}: ${esc(c.comment || '—')}</div>`).join('') : ''}
+   <div class="grades">${[...Array(11).keys()].map(x => `<button data-g="${x}" class="${gsel === x ? 'on' : ''}">${x}</button>`).join('')}</div>
+   <div class="ctrl"><button id="gsave">Записати оцінку</button><button class="sec" id="gnext">Наступний студент</button><button class="sec" id="gcancel">Скасувати</button></div></div>`;
+}
+function bindFeature() {
+  document.querySelectorAll('#main [data-g]').forEach(b => b.onclick = () => { gsel = parseInt(b.dataset.g, 10); drawMain(); });
+  $('#gsave').onclick = () => { if (gsel === null) { alert('Оберіть оцінку від 0 до 10'); return; } const st = D.state.step; act({ cmd: 'unfeature', grade: gsel }); gsel = null; };
+  $('#gnext').onclick = async () => { const g = gsel; if (g !== null) await cmd({ cmd: 'unfeature', grade: g }); else await cmd({ cmd: 'unfeature' }); gsel = null; act({ cmd: 'feature', step: D.state.step }); };
+  $('#gcancel').onclick = () => { gsel = null; act({ cmd: 'unfeature' }); };
+}
+function showQR(title, note, url) { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('#qrTitle').textContent = title; $('#qrNote').textContent = note; $('#qrBox').innerHTML = q.createSvgTag({ cellSize: 6, margin: 3, scalable: true }); $('#qrUrl').textContent = url.replace(/#.*$/, '#…'); $('#qrm').classList.remove('hidden'); }
+const base = () => location.href.replace(/host\.html.*$/, '');
+$('#qrT').onclick = () => showQR('Телефон викладача', 'Скануйте своїм телефоном. Посилання відкриває панель без введення PIN. Студентам цей код не показуйте.', base() + 'teacher.html#' + encodeURIComponent(pin));
+$('#qrS').onclick = () => showQR('QR для студентів', 'Студенти скануюють і вводять прізвище та ім’я.', base() + 'index.html');
+$('#qrClose').onclick = () => $('#qrm').classList.add('hidden');
+$('#csv').onclick = async () => {
+  const r = await (await fetch(C.API_URL + '?action=export&pin=' + encodeURIComponent(pin))).json(); if (!r.ok) { alert('Не вдалося отримати відповіді'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([r.headers].concat(r.rows));
+  ws['!cols'] = r.headers.map((h, i) => ({ wch: i === 0 ? 28 : Math.min(48, Math.max(14, Math.round(String(h).length * 0.45))) }));
+  ws['!freeze'] = { xSplit: 1, ySplit: 1 };
+  XLSX.utils.book_append_sheet(wb, ws, 'Відповіді');
+  const wv = XLSX.utils.aoa_to_sheet(r.votes || []); wv['!cols'] = [{ wch: 20 }, { wch: 28 }, { wch: 6 }, { wch: 28 }, { wch: 12 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, wv, 'Голоси');
+  const safe = String(r.group || 'група').replace(/[\\/:*?"<>|]/g, ' ').trim();
+  const d = new Date(), stamp = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  XLSX.writeFile(wb, 'Кейс_' + safe + '_' + stamp + '.xlsx');
+};
+$('#snap').onclick = async () => { $('#snap').disabled = true; try { const r = await cmd({ cmd: 'snapshot' }); alert(r.ok ? 'Збережено в Google Таблиці: аркуші «Відповіді» та «Голоси».' : 'Не вдалося зберегти'); } catch (e) { alert('Немає зв’язку'); } $('#snap').disabled = false; };
+$('#reset').onclick = async () => {
+  if (prompt('Усі відповіді й результати цієї групи буде очищено (перед цим вони збережуться в Google Таблицю окремими аркушами). Щоб підтвердити, введіть ТАК') !== 'ТАК') return;
+  const g = prompt('Назва наступної групи (для назви аркушів, наприклад 272-1). Можна залишити порожнім:') || '';
+  await cmd({ cmd: 'reset', group: g }); gsel = null; apply(await getDash());
+};
+async function loop() { if (busy || !pin || !D) return; busy = true; try { const r = await getDash(); if (r.ok) apply(r); } catch (e) {} busy = false; }
+setInterval(loop, 3500); setInterval(drawTimer, 500);
+if (pin) enter();
+})();
+</script>
+</body>
+</html>

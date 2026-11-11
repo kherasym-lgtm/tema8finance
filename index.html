@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2F7CF6">
+<title>Ніч, коли бюджет дав тріщину</title>
+<link rel="stylesheet" href="style.css">
+<style>
+textarea.field{min-height:92px;resize:none;font-family:inherit;line-height:1.4}
+.it{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0}
+.it.done{border-color:var(--green)}
+.it .qq{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.it .sv{font-size:11px;color:var(--green);font-weight:600;height:14px;margin-top:2px}
+.opt.sel{border-color:var(--blue);background:var(--soft)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:6px 0 12px}.bar>i{display:block;height:100%;background:var(--grad)}
+.feat{background:var(--soft);border:2px solid var(--blue);border-radius:16px;padding:14px;margin:10px 0}
+.feat h2{margin:0 0 6px}
+.fa{background:#fff;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+.fa .fq{font-size:12px;color:var(--mute);margin-bottom:2px}
+.vt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
+.vt button{border:2px solid var(--line);background:#fff;border-radius:12px;padding:12px 4px;font:600 15px 'Montserrat',sans-serif;color:var(--ink)}
+.vt button.on.ag{background:var(--softg);border-color:var(--green)}.vt button.on.dg{background:#FDECEF;border-color:var(--red)}
+.rv{font-size:13px;margin-top:8px;border-radius:10px;padding:9px 11px}.rv.ok{background:var(--softg)}.rv.bad{background:#FDECEF}
+.rv .e{color:var(--mute);margin-top:3px}
+.callbar b{margin-right:4px}
+.sub{border-top:1px solid var(--line);padding-top:8px;margin-top:8px}.sub:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.sl{font-size:12.5px;font-weight:600;color:var(--blue);margin-bottom:5px}
+select.field{background:#fff;appearance:auto}
+.wc{font-size:12px;color:var(--mute);text-align:right;margin-top:-4px}.wc.over{color:var(--red);font-weight:600}
+.grpq{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div id="top" class="top hidden"><div><div class="t" id="tt"></div><div class="sub" id="ts"></div></div><div class="timer hidden" id="tm">00:00</div></div>
+<main class="wrap" id="view"></main>
+<div id="call" class="callbar hidden"><b>Вас викликає викладач.</b> Розкажіть свою відповідь усно.</div>
+<div id="away" class="overlay hidden"><h1 id="awayTitle"></h1><p id="awayText"></p><button class="btn" id="awayBtn">Повернутися до кейсу</button></div>
+
+<script src="config.js"></script>
+<script src="cases2.js"></script>
+<script>
+(function(){
+"use strict";
+const C = window.CONFIG, CASE = window.CASE, $ = s => document.querySelector(s), view = $('#view'), LS = 'case2_me';
+let me = null, state = null, offset = 0, mine = {}, feature = null, called = false, voted = false, review = {}, myVote = null;
+let introSeen = {}, lastKey = '', fsWanted = false, away = false, awaySince = 0, finalData = null, timers = {};
+try { me = JSON.parse(localStorage.getItem(LS) || 'null'); } catch (e) {}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const order = (id, n) => { let seed = hash((me ? me.id : '') + id), a = [...Array(n).keys()]; const r = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; }; for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const stepInfo = n => CASE.steps.find(s => s.n === n);
+const itemById = id => { for (const s of CASE.steps) for (const it of s.items) if (it.id === id) return it; };
+const fmt = s => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const dur = sec => { const m = Math.floor(sec / 60), r = sec % 60; return (m ? m + ' хв' : '') + (m && r ? ' ' : '') + (r ? r + ' с' : ''); };
+const nowS = () => Date.now() + offset;
+const tracking = () => me && state && state.status === 'running';
+
+async function get(p) { const q = Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&'); return (await fetch(C.API_URL + '?' + q)).json(); }
+async function post(b) { return (await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(b) })).json(); }
+function beacon(b) { const s = JSON.stringify(b); try { if (navigator.sendBeacon && navigator.sendBeacon(C.API_URL, s)) return; } catch (e) {} try { fetch(C.API_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: s }); } catch (e) {} }
+
+/* ---- виходи зі сторінки ---- */
+function goAway(w) { if (away || !tracking()) return; away = true; awaySince = Date.now(); try { localStorage.setItem('case2_away', '1'); } catch (e) {} beacon({ action: 'event', id: me.id, type: 'leave', detail: w }); }
+function comeBack() { if (!away) return; away = false; const sec = Math.round((Date.now() - awaySince) / 1000); try { localStorage.removeItem('case2_away'); } catch (e) {} post({ action: 'event', id: me.id, type: 'return', detail: String(sec) }).catch(() => {}); showAway('Ви виходили з платформи', 'Вас не було ' + sec + ' с. Викладач бачить це на своєму екрані.', 'Повернутися до кейсу'); }
+function showAway(t, p, b, fn) { $('#awayTitle').textContent = t; $('#awayText').textContent = p; $('#awayBtn').textContent = b; $('#away').classList.remove('hidden'); $('#awayBtn').onclick = () => { $('#away').classList.add('hidden'); if (fn) fn(); }; }
+document.addEventListener('visibilitychange', () => { document.hidden ? goAway('hidden') : comeBack(); });
+window.addEventListener('blur', () => setTimeout(() => { if (!document.hasFocus() && !document.hidden) goAway('blur'); }, 500));
+window.addEventListener('focus', () => { if (!document.hidden) comeBack(); });
+window.addEventListener('pagehide', () => { if (tracking() && !away) { try { localStorage.setItem('case2_away', '1'); } catch (e) {} beacon({ action: 'event', id: me.id, type: 'leave', detail: 'pagehide' }); } });
+document.addEventListener('fullscreenchange', () => { if (fsWanted && !document.fullscreenElement && tracking()) { goAway('fullscreen'); showAway('Ви вийшли з повноекранного режиму', 'Поверніться, щоб продовжити.', 'Увійти в повноекранний режим', enterFs); } else if (document.fullscreenElement) fsWanted = true; });
+function enterFs() { const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { try { const p = f.call(el); fsWanted = true; if (p && p.catch) p.catch(() => { fsWanted = false; }); } catch (e) { fsWanted = false; } } }
+history.pushState(null, '', location.href); window.addEventListener('popstate', () => history.pushState(null, '', location.href));
+window.addEventListener('beforeunload', e => { if (tracking()) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---- екрани ---- */
+function setTop(a, b) { $('#top').classList.remove('hidden'); $('#tt').textContent = a; $('#ts').textContent = b || ''; }
+function drawTimer() {
+  const t = $('#tm'); if (!state || state.status !== 'running') { t.classList.add('hidden'); return; }
+  const left = state.durationSec - (nowS() - state.startedAt) / 1000;
+  t.classList.remove('hidden', 'warn', 'end'); t.textContent = left > 0 ? fmt(left) : '00:00';
+  if (left <= 0) t.classList.add('end'); else if (left <= 30) t.classList.add('warn');
+}
+function joinScreen() {
+  $('#top').classList.add('hidden');
+  view.innerHTML = `<div class="card grad" style="margin-top:8px"><h1 style="color:#fff">${esc(CASE.case.title)}</h1><div style="font-size:13px;opacity:.95">Кейс із управління державними фінансами</div></div>
+  <p class="mute" style="margin-top:14px">Введіть прізвище та ім’я, як у журналі.</p>
+  <input id="nm" class="field" placeholder="Прізвище та ім’я" autocomplete="off" autocapitalize="words"><div class="err" id="err"></div>
+  <button class="btn" id="go">Приєднатися</button>
+  <p class="mute" style="margin-top:14px">Під час кейсу не виходьте зі сторінки й не перемикайте вкладки. Викладач побачить кожен вихід.</p>`;
+  $('#go').onclick = async () => {
+    const name = $('#nm').value.trim(); if (name.length < 3) { $('#err').textContent = 'Введіть прізвище та ім’я'; return; }
+    $('#go').disabled = true;
+    try { const r = await post({ action: 'join', name }); if (!r.ok) throw 0; me = { id: r.id, name: r.name }; localStorage.setItem(LS, JSON.stringify(me)); enterFs(); await loadMe(); await poll(); render(true); }
+    catch (e) { $('#err').textContent = 'Не вдалося приєднатися. Перевірте з’єднання.'; $('#go').disabled = false; }
+  };
+}
+function lobbyScreen() {
+  setTop(CASE.case.title, me.name);
+  view.innerHTML = `<h1>Умова кейсу</h1><div class="card"><p style="margin:0">${esc(CASE.case.story)}</p></div>
+  <div class="card g"><h2>Як це працює</h2><p style="margin:0">Шість коротких кроків. На кожному ви відповідаєте на телефоні, а потім викладач викликає студентів розповісти свою відповідь усно. Решта слухає й голосує «згоден» чи «не згоден».</p></div>
+  <p class="mute" style="text-align:center;margin-top:16px">Очікуйте, поки викладач запустить крок 1…</p>`;
+}
+const filled = v => v !== undefined && v !== null && String(v) !== '';
+function bodyHTML(it) {
+  const v = mine[it.id];
+  if (it.type === 'choice') return order(it.id, it.o.length).map(oi => `<button class="opt ${String(v) === String(oi) ? 'sel' : ''}" data-i="${oi}">${esc(it.o[oi])}</button>`).join('');
+  if (it.type === 'select') return `<select class="field sel"><option value="">Оберіть…</option>${it.o.map((o, i) => `<option value="${i}" ${String(v) === String(i) ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  if (it.type === 'number') return `<input class="field num" inputmode="decimal" placeholder="Ваша відповідь" value="${filled(v) ? esc(v) : ''}">`;
+  return `<textarea class="field txt" maxlength="600" placeholder="Ваша відповідь">${filled(v) ? esc(v) : ''}</textarea>` + (it.id === 's6x' ? `<div class="wc" id="wc"></div>` : '');
+}
+function groups(items) { const out = []; items.forEach(it => { const g = it.g || null; const last = out[out.length - 1]; if (g && last && last.g === g) last.items.push(it); else out.push({ g, items: [it] }); }); return out; }
+function stepScreen() {
+  const n = state.step, s = stepInfo(n);
+  setTop('Крок ' + n + '. ' + s.title, me.name);
+  const answered = s.items.filter(it => filled(mine[it.id])).length;
+  let h = `<div class="mute" style="margin-top:4px">${esc(s.lead)}</div><div class="bar"><i style="width:${answered / s.items.length * 100}%"></i></div><div class="mute" id="prg" style="margin:-8px 0 4px">Відповіли: ${answered} із ${s.items.length}</div>`;
+  groups(s.items).forEach(gr => {
+    if (!gr.g) { gr.items.forEach(it => { h += `<div class="it ${filled(mine[it.id]) ? 'done' : ''}" data-id="${it.id}"><div class="qq">${esc(it.q)}</div>${bodyHTML(it)}<div class="sv">${filled(mine[it.id]) ? 'Збережено' : ''}</div></div>`; }); return; }
+    h += `<div class="it"><div class="grpq">${esc(gr.g)}</div>` + gr.items.map(it => `<div class="sub" data-id="${it.id}"><div class="sl">${esc(it.sq || '')}</div>${bodyHTML(it)}<div class="sv">${filled(mine[it.id]) ? 'Збережено' : ''}</div></div>`).join('') + `</div>`;
+  });
+  view.innerHTML = h; bindItems(n);
+  const wc = $('#wc'); if (wc) { const t = view.querySelector('[data-id="s6x"] .txt'); const upd = () => { const w = (t.value.trim().match(/\S+/g) || []).length; wc.textContent = w + ' / 60 слів'; wc.classList.toggle('over', w > 60); }; t.addEventListener('input', upd); upd(); }
+}
+function bindItems(n) {
+  view.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    el.querySelectorAll('.opt').forEach(b => b.onclick = () => save(id, b.dataset.i, el, true));
+    const sel = el.querySelector('select.sel'); if (sel) sel.onchange = () => save(id, sel.value, el, false);
+    const t = el.querySelector('.txt, .num');
+    if (t) { t.oninput = () => { clearTimeout(timers[id]); timers[id] = setTimeout(() => save(id, t.value.trim(), el, false), 700); }; t.onblur = () => { clearTimeout(timers[id]); save(id, t.value.trim(), el, false); }; }
+  });
+}
+async function save(id, value, el, rerender) {
+  if (String(mine[id] === undefined ? '' : mine[id]) === String(value)) return;
+  mine[id] = value; if (el.classList.contains('it')) el.classList.toggle('done', value !== '');
+  const sv = el.querySelector('.sv'); if (sv) sv.textContent = 'Збереження…';
+  if (rerender) el.querySelectorAll('.opt').forEach(b => b.classList.toggle('sel', b.dataset.i === String(value)));
+  try { const r = await post({ action: 'answer', id: me.id, item: id, value }); if (sv) sv.textContent = r.ok ? 'Збережено' : 'Час кроку вийшов'; } catch (e) { if (sv) sv.textContent = 'Немає зв’язку'; }
+  const s = stepInfo(state.step), answered = s.items.filter(it => filled(mine[it.id])).length;
+  const bar = view.querySelector('.bar>i'); if (bar) bar.style.width = (answered / s.items.length * 100) + '%';
+  const pg = $('#prg'); if (pg) pg.textContent = 'Відповіли: ' + answered + ' із ' + s.items.length;
+}
+async function loadReview(n) { if (review[n]) return; try { const r = await get({ action: 'review', step: n }); if (r.ok) { review[n] = r.items; render(true); } } catch (e) {} }
+function shownVal(it, v) { if (!filled(v)) return ''; return (it.type === 'choice' || it.type === 'select') ? (it.o[v] !== undefined ? it.o[v] : v) : v; }
+function reviewScreen() {
+  const n = state.step, s = stepInfo(n); setTop('Крок ' + n + '. ' + s.title, me.name); loadReview(n);
+  const rv = review[n] || {};
+  let h = `<div class="card g" style="margin-top:6px"><b>Крок завершено.</b><p style="margin:4px 0 0;font-size:13px">Нижче ваші відповіді й правильні. Слухайте викладача: він викликатиме студентів.</p></div>`;
+  const one = it => {
+    const v = mine[it.id], shown = shownVal(it, v); const r = rv[it.id];
+    if (it.type === 'text') return `<div class="fa">${filled(v) ? esc(v) : '<span class="mute">без відповіді</span>'}</div>`;
+    if (!r) return `<div class="fa">${filled(v) ? esc(shown) : '<span class="mute">без відповіді</span>'}</div>`;
+    const ok = (it.type === 'number') ? Math.abs(parseFloat(String(v).replace(',', '.')) - r.key) <= 0.1 : String(v) === String(r.key);
+    const right = it.type === 'number' ? r.key : it.o[r.key];
+    return `<div class="rv ${ok ? 'ok' : 'bad'}"><b>${ok ? 'Правильно' : 'Неправильно'}</b>: ${filled(v) ? esc(shown) : 'без відповіді'}${ok ? '' : `<div>Правильно: <b>${esc(right)}</b></div>`}<div class="e">${esc(r.t)}</div></div>`;
+  };
+  groups(s.items).forEach(gr => {
+    if (!gr.g) { gr.items.forEach(it => { h += `<div class="it"><div class="qq">${esc(it.q)}</div>${one(it)}</div>`; }); return; }
+    h += `<div class="it"><div class="grpq">${esc(gr.g)}</div>` + gr.items.map(it => `<div class="sub"><div class="sl">${esc(it.sq || '')}</div>${one(it)}</div>`).join('') + `</div>`;
+  });
+  view.innerHTML = h;
+}
+function featureBlock() {
+  if (!feature) return '';
+  const s = stepInfo(feature.step);
+  const rows = groups(s.items).map(gr => { const parts = gr.items.map(it => { const v = feature.answers[it.id]; if (!filled(v)) return ''; return `<div class="fa"><div class="fq">${esc(gr.g ? (it.sq || '') : it.q)}</div>${esc(shownVal(it, v))}</div>`; }).join(''); return parts ? (gr.g ? `<div class="grpq" style="margin-top:8px;font-size:13px">${esc(gr.g)}</div>` : '') + parts : ''; }).join('');
+  if (called) return `<div class="feat"><h2>Вас викликано</h2><p style="margin:0">Розкажіть свою відповідь усно. Викладач оцінить її.</p>${rows}</div>`;
+  const vv = voted ? myVote : null;
+  return `<div class="feat"><h2>Слухайте відповідь: ${esc(feature.name)}</h2><div class="mute" style="font-size:12px">Крок ${feature.step}. ${esc(s.title)}</div>${rows}
+  ${voted ? `<p class="ok" style="margin:8px 0 0">Ваш голос враховано. Дякуємо.</p>` : `<div class="vt"><button class="ag" data-v="agree">Згоден</button><button class="dg" data-v="disagree">Не згоден</button></div>
+  <input id="cm" class="field" maxlength="120" placeholder="Одне речення: чому так?" style="margin:4px 0"><button class="btn" id="sendv" disabled>Надіслати голос</button>`}</div>`;
+}
+function featureScreen() {
+  setTop(CASE.case.title, me.name);
+  view.innerHTML = featureBlock() + `<p class="mute" style="text-align:center;margin-top:10px">Після голосування чекайте продовження.</p>`;
+  let pick = null;
+  view.querySelectorAll('.vt button').forEach(b => b.onclick = () => { pick = b.dataset.v; view.querySelectorAll('.vt button').forEach(x => x.classList.toggle('on', x === b)); const sv = $('#sendv'); if (sv) sv.disabled = false; });
+  const sv = $('#sendv'); if (sv) sv.onclick = async () => { sv.disabled = true; try { await post({ action: 'vote', id: me.id, fid: feature.fid, vote: pick, comment: $('#cm').value.trim() }); voted = true; myVote = pick; render(true); } catch (e) { sv.disabled = false; } };
+}
+function finalScreen() {
+  setTop(CASE.case.title, me.name);
+  const f = finalData || { score: 0, total: 0, percent: 0, bonus: 0 };
+  view.innerHTML = `<div class="card grad" style="text-align:center;margin-top:16px"><div style="font-size:13px;opacity:.9">Кейс завершено</div><div class="big" style="color:#fff">${f.score}/${f.total}</div><div>правильних відповідей на тестові запитання · ${f.percent}%</div></div>
+  ${f.bonus ? `<div class="card g">Бонус за усні відповіді: <b>+${f.bonus}</b></div>` : ''}<p class="mute" style="text-align:center">Письмові відповіді оцінює викладач. Дякуємо за роботу.</p>`;
+}
+function render(force) {
+  if (!me) { joinScreen(); return; }
+  if (!state) { setTop(CASE.case.title, me.name); view.innerHTML = '<p class="mute" style="text-align:center;margin-top:40px">Підключення…</p>'; return; }
+  const key = [state.step, state.status, feature && feature.fid, called, voted, Object.keys(mine).length, !!review[state.step], !!introSeen[state.step]].join('|');
+  if (!force && key === lastKey) return; lastKey = key;
+  $('#call').classList.toggle('hidden', !called);
+  if (state.status === 'lobby') { lobbyScreen(); return; }
+  if (state.status === 'finished') { finalScreen(); return; }
+  if (feature && !called) { featureScreen(); return; }
+  const n = state.step;
+  if (state.status === 'closed') { reviewScreen(); return; }
+  if (!introSeen[n] && !stepInfo(n).items.some(it => filled(mine[it.id]))) { const s = stepInfo(n); setTop('Крок ' + n + '. ' + s.title, me.name); view.innerHTML = `<div class="big" style="color:var(--blue)">Крок ${n}</div><h1>${esc(s.title)}</h1><div class="card"><p style="margin:0">${esc(s.lead)}</p></div><p class="mute">Час: ${dur(s.seconds)}. Відповіді зберігаються автоматично.</p><button class="btn" id="st">Розпочати</button>`; $('#st').onclick = () => { introSeen[n] = true; render(true); }; return; }
+  if (called) { featureScreen(); return; }
+  stepScreen();
+}
+async function loadMe() { try { const r = await get({ action: 'me', id: me.id }); if (r.ok) { mine = r.answers || {}; finalData = r; } } catch (e) {} }
+async function poll() {
+  if (!me) return;
+  try {
+    const t0 = Date.now(), r = await get({ action: 'state', id: me.id }); if (!r.ok) return;
+    offset = r.now - (t0 + Date.now()) / 2;
+    const prev = state; state = r.state;
+    const nf = r.feature || null; if (!feature || !nf || feature.fid !== nf.fid) { myVote = null; } feature = nf; called = !!r.called; voted = !!r.voted;
+    if (state.status === 'finished' && (!prev || prev.status !== 'finished')) await loadMe();
+    if (localStorage.getItem('case2_away') && tracking() && !away) { localStorage.removeItem('case2_away'); post({ action: 'event', id: me.id, type: 'return', detail: 'reload' }).catch(() => {}); }
+    render(false); drawTimer();
+  } catch (e) {}
+}
+(async function init() { if (me) await loadMe(); render(true); await poll(); setInterval(poll, C.POLL_MS || 3000); setInterval(drawTimer, 500); })();
+})();
+</script>
+</body>
+</html>

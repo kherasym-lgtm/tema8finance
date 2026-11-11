@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2F7CF6">
+<title>Телефон викладача</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body{-webkit-user-select:text;user-select:text}
+.tabs{display:flex;gap:6px;padding:10px 12px 0;background:#fff;position:sticky;top:var(--hh,52px);z-index:4}
+.tabs button{flex:1;border:2px solid var(--blue);background:#fff;color:var(--blue);border-radius:999px;padding:10px 4px;font:600 14px 'Montserrat',sans-serif}
+.tabs button.on{background:var(--grad);color:#fff;border-color:transparent}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.chips button{border:2px solid var(--line);background:#fff;border-radius:10px;padding:6px 12px;font:600 13px 'Montserrat',sans-serif;color:var(--ink)}.chips button.on{background:var(--soft);border-color:var(--blue);color:var(--blue)}
+.pc{background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0}.pc.hot{border-color:var(--red)}
+.pc .nm{font-weight:700;font-size:17px}.pct{font-weight:700;font-size:18px}.pct.bad{color:var(--red)}.pct.mid{color:var(--amber)}.pct.good{color:var(--green)}
+.lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--blue);margin:10px 0 2px}
+.ask{background:var(--soft);border-radius:10px;padding:9px 11px;font-size:14px}
+.teach{background:var(--softg);border-radius:10px;padding:9px 11px;font-size:13.5px}.teach.ex{background:#fff;border:1px solid var(--line)}
+.ok{color:var(--green);font-weight:600}.no{color:var(--red);font-weight:600}.mini{font-size:12.5px;color:var(--mute)}
+details{margin-top:8px}summary{font-weight:600;font-size:13px;color:var(--blue);cursor:pointer}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.ctl button{border:0;border-radius:999px;padding:11px 16px;font:600 14px 'Montserrat',sans-serif;color:#fff;background:var(--grad)}.ctl button.sec{background:#fff;color:var(--blue);border:2px solid var(--blue)}.ctl button.danger{background:var(--red)}
+.grades{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin:8px 0}.grades button{border:2px solid var(--line);background:#fff;border-radius:8px;padding:8px 0;font:600 12px 'Montserrat',sans-serif;color:var(--ink)}.grades button.on{background:var(--grad);color:#fff;border-color:transparent}
+.votes{display:flex;gap:8px;margin:8px 0}.votes div{flex:1;border-radius:10px;padding:8px;text-align:center;font-weight:700}.votes .ag{background:var(--softg);color:var(--green)}.votes .dg{background:#FDECEF;color:var(--red)}.votes span{font-size:26px;display:block}
+.fa{background:var(--soft);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:13.5px}.fa.okk{background:var(--softg)}.fa.nn{background:#FDECEF}.fa .fq{font-size:11.5px;color:var(--mute);margin-bottom:2px}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--grad);color:#fff;border-radius:14px;padding:12px 14px;font-weight:600;font-size:14px;text-align:center}
+.gate{max-width:360px;margin:70px auto;text-align:center;padding:0 16px}
+table.r{width:100%;border-collapse:collapse;font-size:13px}table.r td{padding:5px 6px;border-top:1px solid var(--line)}table.r td:first-child{font-weight:700;color:var(--blue);white-space:nowrap}
+.cm{font-size:12.5px;margin:2px 0}.cm b.a{color:var(--green)}.cm b.d{color:var(--red)}
+</style>
+</head>
+<body>
+<div id="gate" class="gate hidden"><h1>Телефон викладача</h1><input id="pin" class="field" type="password" placeholder="PIN"><div class="err" id="gerr"></div><button class="btn" id="gbtn">Увійти</button></div>
+<div id="app" class="hidden">
+  <div class="top" id="hd"><div><div class="t">Телефон викладача</div><div class="sub" id="ts"></div></div><div class="timer hidden" id="tm">00:00</div></div>
+  <div class="tabs"><button id="b1" class="on">Усні</button><button id="b2">Розбір</button></div>
+  <main class="wrap" id="view"></main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="config.js"></script>
+<script src="cases2.js"></script>
+<script>
+(function(){
+"use strict";
+const C = window.CONFIG, CASE = window.CASE, $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const stepInfo = n => CASE.steps.find(s => s.n === n);
+const fmt = s => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const dur = sec => { const m = Math.floor(sec / 60), r = sec % 60; return (m ? m + ' хв' : '') + (m && r ? ' ' : '') + (r ? r + ' с' : ''); };
+let pin = '', T = null, D = null, offset = 0, tab = 'oral', selStep = 0, userPicked = false, oralIdx = {}, gsel = null, busy = false, prevKey = '';
+(function(){ const h = location.hash.replace(/^#/, ''); if (h) { pin = decodeURIComponent(h); try { sessionStorage.setItem('case2_pin', pin); } catch (e) {} history.replaceState(null, '', location.pathname + location.search); } else { try { pin = sessionStorage.getItem('case2_pin') || ''; } catch (e) {} } })();
+async function get(p) { const q = Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&'); return (await fetch(C.API_URL + '?' + q)).json(); }
+async function cmd(b) { return (await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action: 'hostcmd', pin }, b)) })).json(); }
+async function act(b, conf) { if (busy) return; if (conf && !confirm(conf)) return; busy = true; try { await cmd(b); await poll(true); } catch (e) { toast('Немає зв’язку, спробуйте ще раз'); } busy = false; }
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3500); }
+async function start() {
+  if (!pin) { $('#gate').classList.remove('hidden'); return; }
+  try { const r = await get({ action: 'teach', pin }); if (!r.ok) throw 0; T = r; $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); document.documentElement.style.setProperty('--hh', $('#hd').offsetHeight + 'px'); await poll(); setInterval(poll, 3500); setInterval(drawTimer, 500); }
+  catch (e) { pin = ''; try { sessionStorage.removeItem('case2_pin'); } catch (x) {} $('#gate').classList.remove('hidden'); $('#gerr').textContent = 'Невірний PIN або немає зв’язку'; }
+}
+$('#gbtn').onclick = () => { pin = $('#pin').value.trim(); start(); };
+async function poll(force) {
+  try {
+    const t0 = Date.now(), r = await get({ action: 'dash', pin }); if (!r.ok) return;
+    offset = r.now - (t0 + Date.now()) / 2; const prev = D; D = r; const st = D.state;
+    if (!userPicked || (prev && prev.state.step !== st.step)) selStep = st.step || 1;
+    if (prev && prev.state.status === 'running' && (st.status === 'closed' || st.status === 'finished')) { selStep = prev.state.step; userPicked = false; setTab('review'); toast('Крок ' + prev.state.step + ' закрито: розбір готовий'); try { navigator.vibrate && navigator.vibrate(200); } catch (e) {} }
+    if (prev && !prev.feature && D.feature) { setTab('oral'); try { navigator.vibrate && navigator.vibrate(100); } catch (e) {} }
+    render(!!force); drawTimer();
+  } catch (e) {}
+}
+function setTab(t) { tab = t; $('#b1').classList.toggle('on', t === 'oral'); $('#b2').classList.toggle('on', t === 'review'); render(true); }
+$('#b1').onclick = () => setTab('oral'); $('#b2').onclick = () => setTab('review');
+function drawTimer() {
+  const t = $('#tm'); if (!D) return; const st = D.state;
+  const label = { lobby: 'Очікування початку', running: 'Крок ' + st.step + ' іде', closed: 'Крок ' + st.step + ' завершено', finished: 'Кейс завершено' }[st.status];
+  const here = D.students.filter(s => s.seenAgo !== null && s.seenAgo < 30).length;
+  $('#ts').textContent = label + ' · у платформі ' + here + ' із ' + D.students.length;
+  if (st.status !== 'running') { t.classList.add('hidden'); return; }
+  const left = st.durationSec - (Date.now() + offset - st.startedAt) / 1000; t.classList.remove('hidden', 'warn', 'end'); t.textContent = left > 0 ? fmt(left) : '00:00';
+  if (left <= 0) t.classList.add('end'); else if (left <= 30) t.classList.add('warn');
+}
+function ctrlBlock() {
+  const st = D.state; let h = '<div class="ctl">';
+  if (st.status === 'lobby' || st.status === 'closed') { const n = st.status === 'lobby' ? 1 : st.step + 1; if (n <= CASE.steps.length) h += `<button data-a="start" data-n="${n}">Запустити крок ${n}. ${esc(stepInfo(n).title)} (${dur(stepInfo(n).seconds)})</button>`; if (st.status === 'closed') h += `<button class="sec" data-a="finish">Завершити кейс</button>`; }
+  if (st.status === 'running') h += `<button class="sec" data-a="extend">+30 с</button><button class="danger" data-a="close">Закрити крок ${st.step}</button>`;
+  if (st.status === 'running' || st.status === 'closed') h += `<button class="sec" data-a="pick">Обрати студента</button>`;
+  return h + '</div>';
+}
+function bind() {
+  document.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+    const a = b.dataset.a;
+    if (a === 'start') { const n = parseInt(b.dataset.n, 10); gsel = null; act({ cmd: 'start', step: n, durationSec: stepInfo(n).seconds }); }
+    else if (a === 'extend') act({ cmd: 'extend', sec: 30 }); else if (a === 'close') act({ cmd: 'close' });
+    else if (a === 'finish') act({ cmd: 'finish' }, 'Завершити кейс? Студенти побачать свої результати.');
+    else if (a === 'pick') { gsel = null; act({ cmd: 'feature', step: D.state.step }); }
+    else if (a === 'next') { const g = gsel; (async () => { await cmd({ cmd: 'unfeature', grade: g === null ? undefined : g }); gsel = null; act({ cmd: 'feature', step: D.state.step }); })(); }
+    else if (a === 'save') { if (gsel === null) { toast('Оберіть оцінку від 0 до 10'); return; } const g = gsel; gsel = null; act({ cmd: 'unfeature', grade: g }); }
+    else if (a === 'cancel') { gsel = null; act({ cmd: 'unfeature' }); }
+  });
+  document.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { gsel = parseInt(b.dataset.g, 10); render(true); });
+  document.querySelectorAll('[data-oral]').forEach(b => b.onclick = () => { const k = b.dataset.oral; oralIdx[k] = (oralIdx[k] || 0) + 1; render(true); });
+  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { selStep = parseInt(b.dataset.s, 10); userPicked = true; render(true); });
+}
+function oralBlock(step, key) {
+  const st = T.steps.find(s => s.n === step); if (!st) return ''; const list = st.oral, i = (oralIdx[key] || 0) % list.length, o = list[i];
+  return `<span class="lbl">Усне питання (${i + 1} з ${list.length})</span><div class="ask">${esc(o.q)}</div><details><summary>Що має прозвучати</summary><div class="teach" style="margin-top:6px">${esc(o.h)}</div></details><button class="sm" style="border:2px solid var(--blue);background:#fff;color:var(--blue);border-radius:999px;padding:7px 12px;font:600 12.5px Montserrat;margin-top:8px" data-oral="${esc(key)}">Інше питання</button>`;
+}
+function teachBlock(e, grp) { return `<span class="lbl">${grp ? 'Роз’яснення для групи' : 'Роз’яснення'}</span><div class="teach">${esc(e[0])}</div><span class="lbl">Приклад 1</span><div class="teach ex">${esc(e[1])}</div><span class="lbl">Приклад 2</span><div class="teach ex">${esc(e[2])}</div>`; }
+const fl = v => v !== undefined && v !== null && String(v) !== '';
+function groupsOf(items) { const out = []; items.forEach(it => { const g = it.g || null, last = out[out.length - 1]; if (g && last && last.g === g) last.items.push(it); else out.push({ g, items: [it] }); }); return out; }
+function featureCard() {
+  const f = D.feature, s = stepInfo(f.step);
+  let h = `<div class="pc hot"><div class="mini">Викликано · крок ${f.step}. ${esc(s.title)}</div><div class="nm">${esc(f.name)}</div>
+  <div class="votes"><div class="ag"><span>${f.agree}</span>згодні</div><div class="dg"><span>${f.disagree}</span>не згодні</div></div>
+  ${f.comments.slice(-4).map(c => `<div class="cm"><b class="${c.vote === 'agree' ? 'a' : 'd'}">${c.vote === 'agree' ? 'Згоден' : 'Не згоден'}</b> ${esc(c.name)}: ${esc(c.comment || '—')}</div>`).join('')}
+  <div class="grades">${[...Array(11).keys()].map(x => `<button data-g="${x}" class="${gsel === x ? 'on' : ''}">${x}</button>`).join('')}</div>
+  <div class="ctl"><button data-a="save">Записати</button><button class="sec" data-a="next">Наступний студент</button><button class="sec" data-a="cancel">Скасувати</button></div>
+  ${oralBlock(f.step, f.id)}<span class="lbl" style="margin-top:14px">Відповіді студента й підказки</span>`;
+  groupsOf(s.items).forEach(gr => {
+    let part = '';
+    gr.items.forEach(it => {
+      const v = f.answers[it.id], k = T.items[it.id] || {}, lab = esc(gr.g ? (it.sq || '') : it.q);
+      if (!fl(v)) return;
+      if (it.type === 'text') { part += `<div class="fa"><div class="fq">${lab}</div>${esc(v)}</div><details><summary>Що має прозвучати</summary><div class="teach" style="margin-top:6px">${esc(k.hint || '')}</div></details>`; return; }
+      const shown = (it.type === 'choice' || it.type === 'select') ? (it.o[v] !== undefined ? it.o[v] : v) : v, hasKey = k.key !== null && k.key !== undefined;
+      if (!hasKey) { part += `<div class="fa"><div class="fq">${lab}</div>${esc(shown)}</div>`; return; }
+      const ok = it.type === 'number' ? Math.abs(parseFloat(String(v).replace(',', '.')) - k.key) <= (k.tol || .1) : parseInt(v, 10) === k.key;
+      if (ok) { part += `<div class="fa okk"><div class="fq">${lab}</div>${esc(shown)}</div>`; return; }
+      const right = it.type === 'number' ? k.key : it.o[k.key];
+      part += `<div class="fa nn"><div class="fq">${lab}</div><b>${esc(shown)}</b><div class="mini">Правильно: <span class="ok">${esc(right)}</span></div></div>${k.expl ? teachBlock(k.expl, false) : ''}`;
+    });
+    if (part) h += `<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:6px">${gr.g ? `<div style="font-weight:700;font-size:13.5px;color:var(--blue)">${esc(gr.g)}</div>` : ''}${part}</div>`;
+  });
+  return h + '</div>';
+}
+function renderOral() {
+  const st = D.state, step = st.step || 1; let h = ctrlBlock();
+  if (st.status === 'lobby') h += `<div class="card"><b>Кейс ще не розпочато.</b><p class="mini" style="margin:4px 0 0">Після запуску кроку тут з’являться підказки й студенти, яких ви викличете.</p></div>`;
+  if (D.feature) h += featureCard();
+  else if (st.status !== 'lobby') h += `<div class="card"><b>Нікого не викликано.</b><p class="mini" style="margin:4px 0 0">Натисніть «Обрати студента» тут або на великому екрані. Тут з’являться його відповіді, питання й підказки.</p></div><div class="pc"><div class="nm">Питання до кроку ${step}</div>${oralBlock(step, 'free')}</div>`;
+  h += `<div class="card g"><b>Шкала оцінки 0–10</b><table class="r" style="margin-top:4px">${T.rubric.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</table></div>`;
+  $('#view').innerHTML = h; bind();
+}
+function renderReview() {
+  const n = selStep || 1, s = stepInfo(n); let h = ctrlBlock() + `<div class="chips">${CASE.steps.map(x => `<button data-s="${x.n}" class="${x.n === n ? 'on' : ''}">Крок ${x.n}</button>`).join('')}</div>`;
+  const live = D.state.status === 'running' && D.state.step === n;
+  h += `<div class="mini" style="margin-bottom:6px"><b>${esc(s.title)}.</b> ${live ? 'Крок ще йде, дані оновлюються.' : 'Тестові запитання від найважчого до найлегшого.'}</div>`;
+  const rows = s.items.filter(it => it.type !== 'text' && T.items[it.id] && T.items[it.id].key !== null && T.items[it.id].key !== undefined).map((it, i) => { const t = D.stats[it.id] || { n: 0, ok: 0, opts: {} }; return { it, n: t.n, p: t.n ? Math.round(t.ok / t.n * 100) : null, opts: t.opts || {} }; }).filter(r => r.n > 0).sort((a, b) => a.p - b.p);
+  if (!rows.length) h += `<div class="card"><b>Поки немає відповідей на цьому кроці.</b></div>`;
+  const shown = rows.filter(r => r.p < 85).slice(0, 4), list = shown.length ? shown : rows.slice(0, 2);
+  list.forEach(r => {
+    const k = T.items[r.it.id], cls = r.p < 60 ? 'bad' : r.p < 85 ? 'mid' : 'good';
+    const worst = (r.it.type === 'choice' || r.it.type === 'select') ? Object.keys(r.opts).filter(o => parseInt(o, 10) !== k.key).sort((a, b) => r.opts[b] - r.opts[a])[0] : undefined;
+    h += `<div class="pc ${r.p < 60 ? 'hot' : ''}"><div><span class="pct ${cls}">${r.p}% правильно</span> <span class="mini">· відповіли ${r.n}</span></div><div style="font-size:14px;margin:4px 0"><b>${esc(r.it.q)}</b></div>
+    <div class="mini">Правильно: <span class="ok">${esc(r.it.type === 'choice' ? r.it.o[k.key] : k.key)}</span></div>${worst !== undefined ? `<div class="mini">Найчастіше обирали: <span class="no">${esc(r.it.o[worst])}</span> (${r.opts[worst]})</div>` : ''}
+    ${k.expl ? teachBlock(k.expl, true) : ''}</div>`;
+  });
+  const texts = s.items.filter(it => it.type === 'text');
+  if (texts.length) h += `<div class="card"><b>Письмові відповіді</b>` + texts.map(it => { const f = D.feed.filter(x => x.item === it.id); const cur = D.state.step === n; return `<div style="margin-top:8px"><div style="font-size:13.5px"><b>${esc(it.q)}</b></div><div class="mini">${cur ? 'Відповіли: ' + f.length : 'Відповіді доступні, коли цей крок активний'}</div><details><summary>Що має прозвучати</summary><div class="teach" style="margin-top:6px">${esc(T.items[it.id].hint)}</div></details></div>`; }).join('') + `</div>`;
+  $('#view').innerHTML = h; bind();
+}
+function render(force) {
+  if (!D || !T) return;
+  const key = JSON.stringify([D.state, D.feature, D.stats, tab, selStep, gsel, D.feed.length]);
+  if (!force && key === prevKey) return; prevKey = key;
+  if (tab === 'oral') renderOral(); else renderReview();
+}
+start();
+})();
+</script>
+</body>
+</html>
