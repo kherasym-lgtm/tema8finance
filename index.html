@@ -93,7 +93,7 @@ function joinScreen() {
   $('#go').onclick = async () => {
     const name = $('#nm').value.trim(); if (name.length < 3) { $('#err').textContent = 'Введіть прізвище та ім’я'; return; }
     $('#go').disabled = true;
-    try { const r = await post({ action: 'join', name }); if (!r.ok) throw 0; me = { id: r.id, name: r.name }; localStorage.setItem(LS, JSON.stringify(me)); enterFs(); await loadMe(); await poll(); render(true); }
+    try { const r = await post({ action: 'join', name }); if (!r.ok) throw 0; me = { id: r.id, name: r.name, epoch: r.epoch }; localStorage.setItem(LS, JSON.stringify(me)); enterFs(); await loadMe(); await poll(); render(true); }
     catch (e) { $('#err').textContent = 'Не вдалося приєднатися. Перевірте з’єднання.'; $('#go').disabled = false; }
   };
 }
@@ -207,6 +207,11 @@ async function poll() {
   try {
     const t0 = Date.now(), r = await get({ action: 'state', id: me.id }); if (!r.ok) return;
     offset = r.now - (t0 + Date.now()) / 2;
+    if (me && r.epoch && me.epoch !== r.epoch) {   // почалася нова пара: старий вхід недійсний
+      try { localStorage.removeItem(LS); localStorage.removeItem('case2_away'); } catch (e) {}
+      me = null; mine = {}; state = null; feature = null; called = false; voted = false; introSeen = {}; review = {}; lastKey = '';
+      $('#call').classList.add('hidden'); render(true); return;
+    }
     const prev = state; state = r.state;
     const nf = r.feature || null; if (!feature || !nf || feature.fid !== nf.fid) { myVote = null; } feature = nf; called = !!r.called; voted = !!r.voted;
     if (state.status === 'finished' && (!prev || prev.status !== 'finished')) await loadMe();

@@ -51,17 +51,36 @@ let pin = '', T = null, D = null, offset = 0, tab = 'oral', selStep = 0, userPic
 (function(){ const h = location.hash.replace(/^#/, ''); if (h) { pin = decodeURIComponent(h); try { sessionStorage.setItem('case2_pin', pin); } catch (e) {} history.replaceState(null, '', location.pathname + location.search); } else { try { pin = sessionStorage.getItem('case2_pin') || ''; } catch (e) {} } })();
 async function get(p) { const q = Object.keys(p).map(k => k + '=' + encodeURIComponent(p[k])).join('&'); return (await fetch(C.API_URL + '?' + q)).json(); }
 async function cmd(b) { return (await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action: 'hostcmd', pin }, b)) })).json(); }
-async function act(b, conf) { if (busy) return; if (conf && !confirm(conf)) return; busy = true; try { await cmd(b); await poll(true); } catch (e) { toast('Немає зв’язку, спробуйте ще раз'); } busy = false; }
+let lastCmdAt = 0;
+function optimistic(b) {
+  if (!D) return; const st = D.state;
+  if (b.cmd === 'start') D.state = { step: b.step, status: 'running', startedAt: Date.now() + offset, durationSec: b.durationSec };
+  else if (b.cmd === 'extend') st.durationSec += b.sec || 30;
+  else if (b.cmd === 'close') st.status = 'closed';
+  else if (b.cmd === 'finish') st.status = 'finished';
+  else if (b.cmd === 'unfeature') D.feature = null;
+  render(true); drawTimer();
+}
+let chain = Promise.resolve(), pending = 0;
+function act(b, conf) {
+  if (conf && !confirm(conf)) return Promise.resolve();
+  lastCmdAt = Date.now(); optimistic(b); pending++;
+  chain = chain.then(() => cmd(b)).then(r => { if (b.cmd === 'feature' && r && r.picked === false) toast('Нікого обрати: ніхто ще не відповідав на цьому кроці або вже відповідав усно'); }).catch(() => { toast('Немає зв’язку, спробуйте ще раз'); }).then(async () => {
+    pending--; lastCmdAt = Date.now();
+    if (pending === 0) await poll(true);
+  });
+  return chain;
+}
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3500); }
 async function start() {
   if (!pin) { $('#gate').classList.remove('hidden'); return; }
-  try { const r = await get({ action: 'teach', pin }); if (!r.ok) throw 0; T = r; $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); document.documentElement.style.setProperty('--hh', $('#hd').offsetHeight + 'px'); await poll(); setInterval(poll, 3500); setInterval(drawTimer, 500); }
+  try { const r = await get({ action: 'teach', pin }); if (!r.ok) throw 0; T = r; $('#gate').classList.add('hidden'); $('#app').classList.remove('hidden'); document.documentElement.style.setProperty('--hh', $('#hd').offsetHeight + 'px'); await poll(); setInterval(poll, 4000); setInterval(drawTimer, 500); }
   catch (e) { pin = ''; try { sessionStorage.removeItem('case2_pin'); } catch (x) {} $('#gate').classList.remove('hidden'); $('#gerr').textContent = 'Невірний PIN або немає зв’язку'; }
 }
 $('#gbtn').onclick = () => { pin = $('#pin').value.trim(); start(); };
 async function poll(force) {
   try {
-    const t0 = Date.now(), r = await get({ action: 'dash', pin }); if (!r.ok) return;
+    const t0 = Date.now(), r = await get({ action: 'dash', pin }); if (!r.ok || ((t0 < lastCmdAt || pending > 0) && !force)) return;
     offset = r.now - (t0 + Date.now()) / 2; const prev = D; D = r; const st = D.state;
     if (!userPicked || (prev && prev.state.step !== st.step)) selStep = st.step || 1;
     if (prev && prev.state.status === 'running' && (st.status === 'closed' || st.status === 'finished')) { selStep = prev.state.step; userPicked = false; setTab('review'); toast('Крок ' + prev.state.step + ' закрито: розбір готовий'); try { navigator.vibrate && navigator.vibrate(200); } catch (e) {} }

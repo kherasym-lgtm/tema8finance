@@ -75,7 +75,26 @@ const fmt = s => { s = Math.max(0, Math.round(s)); return String(Math.floor(s / 
 const dur = sec => { const m = Math.floor(sec / 60), r = sec % 60; return (m ? m + ' хв' : '') + (m && r ? ' ' : '') + (r ? r + ' с' : ''); };
 async function getDash() { return (await fetch(C.API_URL + '?action=dash&pin=' + encodeURIComponent(pin))).json(); }
 async function cmd(b) { return (await fetch(C.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ action: 'hostcmd', pin }, b)) })).json(); }
-async function act(b, conf) { if (busy) return; if (conf && !confirm(conf)) return; busy = true; try { await cmd(b); apply(await getDash()); } catch (e) {} busy = false; }
+let lastCmdAt = 0;
+function optimistic(b) {
+  if (!D) return; const st = D.state;
+  if (b.cmd === 'start') D.state = { step: b.step, status: 'running', startedAt: Date.now() + offset, durationSec: b.durationSec };
+  else if (b.cmd === 'extend') st.durationSec += b.sec || 30;
+  else if (b.cmd === 'close') st.status = 'closed';
+  else if (b.cmd === 'finish') st.status = 'finished';
+  else if (b.cmd === 'unfeature') D.feature = null;
+  drawCtrl(); drawMain(); drawStatus(); drawTimer();
+}
+let chain = Promise.resolve(), pending = 0;
+function act(b, conf) {
+  if (conf && !confirm(conf)) return Promise.resolve();
+  lastCmdAt = Date.now(); optimistic(b); pending++;
+  chain = chain.then(() => cmd(b)).then(r => { if (b.cmd === 'feature' && r && r.picked === false) alert('Нікого обрати: немає студентів, які відповідали на цьому кроці й ще не відповідали усно. Можна натиснути прізвище студента в списку.'); }).catch(() => { alert('Немає зв’язку із сервером. Спробуйте ще раз.'); }).then(async () => {
+    pending--; lastCmdAt = Date.now();
+    if (pending === 0) { try { apply(await getDash()); } catch (e) {} }
+  });
+  return chain;
+}
 
 async function enter() {
   try {
@@ -208,8 +227,8 @@ $('#reset').onclick = async () => {
   const g = prompt('Назва наступної групи (для назви аркушів, наприклад 272-1). Можна залишити порожнім:') || '';
   await cmd({ cmd: 'reset', group: g }); gsel = null; apply(await getDash());
 };
-async function loop() { if (busy || !pin || !D) return; busy = true; try { const r = await getDash(); if (r.ok) apply(r); } catch (e) {} busy = false; }
-setInterval(loop, 3500); setInterval(drawTimer, 500);
+async function loop() { if (pending > 0 || !pin || !D) return; const t0 = Date.now(); try { const r = await getDash(); if (r.ok && t0 >= lastCmdAt && pending === 0) apply(r); } catch (e) {} }
+setInterval(loop, 4000); setInterval(drawTimer, 500);
 if (pin) enter();
 })();
 </script>
